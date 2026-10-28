@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2026-06-12",
+    "title": "我们在一起啦",
+    "description": "小宇和乐乐的故事 从这一天开始",
+    "placeholder": false
+  },
+  {
+    "date": "",
+    "title": "在这里 写下一个小小的心动",
+    "description": "这是一张待填写的卡片 换成我们想记住的那一天吧",
+    "placeholder": true
+  },
+  {
+    "date": "",
+    "title": "再留一页 给我们的以后",
+    "description": "也许是一张合照 也许是一起度过的普通一天 等我们来写下它",
+    "placeholder": true
+  }
+]
