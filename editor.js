@@ -24,11 +24,11 @@
     if (trigger?.isConnected) trigger.focus({ preventScroll: true });
     else document.querySelector("#main")?.focus({ preventScroll: true });
   }
-  function open({ title, fields, save }) {
+  function open({ title, fields, save, submitLabel=copy.save, hint=copy.editHint }) {
     if (dialog.open) return;
     trigger = document.activeElement;
     const form = node("form", "editor-form"), heading = node("h2", "", title); heading.id = "editor-heading";
-    form.append(heading, node("p", "editor-hint", copy.editHint));
+    form.append(heading, node("p", "editor-hint", hint));
     const inputs = new Map();
     for (const field of fields) {
       const wrapper = node("div", "editor-field"), label = node("label", "", field.label);
@@ -52,7 +52,7 @@
       inputs.set(field.name, input); form.append(wrapper);
     }
     const error = node("p", "editor-error"); error.setAttribute("role", "alert");
-    const actions = node("div", "editor-actions"), cancel = node("button", "secondary-button", copy.cancel), submit = node("button", "primary-button", copy.save);
+    const actions = node("div", "editor-actions"), cancel = node("button", "secondary-button", copy.cancel), submit = node("button", "primary-button", submitLabel);
     cancel.type = "button"; submit.type = "submit"; cancel.addEventListener("click", close);
     actions.append(cancel, submit); form.append(error, actions); dialog.replaceChildren(form);
     form.addEventListener("submit", async event => {
@@ -65,7 +65,7 @@
       try { await save(values); busy = false; await close(); }
       catch (problem) { error.textContent = window.MemoryCloud.message(problem); }
       finally {
-        busy = false; submit.disabled = false; cancel.disabled = false; submit.textContent = copy.save;
+        busy = false; submit.disabled = false; cancel.disabled = false; submit.textContent = submitLabel;
         for (const input of inputs.values()) input.disabled = false;
       }
     });

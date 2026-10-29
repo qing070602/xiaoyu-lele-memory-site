@@ -50,9 +50,10 @@
     const results = await Promise.all([
       db.from("memory_timeline").select("*").order("date", { ascending: true }).order("created_at", { ascending: true }),
       db.from("memory_photos").select("*").order("created_at", { ascending: false }),
-      db.from("memory_letter").select("*").eq("id", 1).single()
+      db.from("memory_letter").select("*").order("created_at", { ascending: false }),
+      db.from("memory_profile").select("*").eq("id", 1).single()
     ]);
-    return { timeline: checked(results[0]), photos: checked(results[1]), letter: checked(results[2]) };
+    return { timeline: checked(results[0]), photos: checked(results[1]), letters: checked(results[2]), profile: checked(results[3]) };
   }
   async function save(table, values, previous) {
     const db = connection();
@@ -76,7 +77,24 @@
     }
     return pending.get(path);
   }
-  async function uploadPhoto(file, values) {
+  async function cleanupFiles() {
+    const db=connection(), jobs=checked(await db.from("memory_file_cleanup").select("storage_path").limit(50));
+    let remaining=0;
+    for (const job of jobs) {
+      try {
+        checked(await db.storage.from(config.bucket).remove([job.storage_path]));
+        checked(await db.from("memory_file_cleanup").delete().eq("storage_path",job.storage_path));
+        if (urls.has(job.storage_path)) URL.revokeObjectURL(urls.get(job.storage_path));
+        urls.delete(job.storage_path);
+      } catch { remaining++; }
+    }
+    return remaining;
+  }
+  async function remove(table, previous) {
+    const rows=checked(await connection().from(table).delete().eq("id",previous.id).eq("revision",previous.revision).select("id"));
+    if(rows.length!==1) throw new Error(copy.conflict);
+  }
+  async function uploadPhoto(file, values, previous) {
     const extensions = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
     const ext = extensions[file?.type];
     if (!ext || file.size > config.maxPhotoBytes || file.size === 0) throw new Error(copy.photoTypeError);
@@ -88,7 +106,7 @@
     const path = `photos/${crypto.randomUUID()}.${ext}`;
     const bucket = connection().storage.from(config.bucket);
     checked(await bucket.upload(path, file, { contentType: file.type, upsert: false }));
-    try { return await save("memory_photos", { ...values, storage_path: path }); }
+    try { return await save("memory_photos", { ...values, storage_path: path }, previous); }
     catch (error) {
       // The database policy only permits deleting unreferenced uploads. A lost
       // insert response cannot cause a successfully saved photo to be removed.
@@ -107,5 +125,5 @@
     if (error?.status === 401 || error?.code === "PGRST301") return copy.loginRequired;
     return copy.networkError;
   }
-  window.MemoryCloud = { signIn, restore, signOut, load, save, photoUrl, uploadPhoto, onSignedOut, clear, message };
+  window.MemoryCloud = { signIn, restore, signOut, load, save, remove, cleanupFiles, photoUrl, uploadPhoto, onSignedOut, clear, message };
 })();

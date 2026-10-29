@@ -7,7 +7,7 @@
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const gate = $("#gate"), app = $("#app"), main = $("#main"), dialog = $("#photo-dialog");
   let catMarkup = "", timelineData = [], unlocked = false, pageToken = 0, pageAnimation;
-  let member = null, letterRecord = null, authVersion = 0, refreshing = false, noticeTimer;
+  let member = null, letterRecord = null, letters = [], profileRecord = null, selectedLetterId = null, authVersion = 0, refreshing = false, noticeTimer;
   let currentPhoto = 0, photoTrigger = null, dialogClosing = false, dialogToken = 0;
   const icons = {
     heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>',
@@ -72,18 +72,17 @@
   async function loadCloud() {
     const version = authVersion, data = await cloud.load();
     if (version !== authVersion) return false;
-    timelineData = data.timeline; C.photos = data.photos; letterRecord = data.letter;
-    C.letter = { greeting: data.letter.greeting, paragraphs: data.letter.body.split("\n"), signature: data.letter.signature };
-    C.copy.home.quote = C.letter.paragraphs.slice(0, 2).join("\n");
+    timelineData = data.timeline; C.photos = data.photos; letters = data.letters; applyProfile(data.profile); selectLetter();
+    cloud.cleanupFiles().then(count => { if (count && version === authVersion && unlocked) notice(shared.cleanupPending); }).catch(() => {});
     return true;
   }
   async function refreshContent(announce = true) {
     if (!unlocked || refreshing || editor.isOpen()) return;
     refreshing = true; $("#refresh-button").disabled = true;
-    const previous = JSON.stringify([timelineData, C.photos, letterRecord]);
+    const previous = JSON.stringify([timelineData, C.photos, letters, profileRecord]);
     try {
       if (await loadCloud()) {
-        if (previous !== JSON.stringify([timelineData, C.photos, letterRecord])) {
+        if (previous !== JSON.stringify([timelineData, C.photos, letters, profileRecord])) {
           if (dialog.open) await closePhoto(); await renderRoute(false);
         }
         if (announce) notice(shared.refreshed);
@@ -97,6 +96,40 @@
   function toolbar(label, iconName, action) {
     const node = el("div", "shared-toolbar"), add = button(label, "secondary-button", iconName);
     add.addEventListener("click", action); node.append(el("p", "", format(shared.signedIn, { name: member.name })), add); return node;
+  }
+  function applyProfile(profile) {
+    profileRecord=profile; C.couple={first:profile.first_name,second:profile.second_name}; C.startDate=profile.start_date+"T00:00:00+08:00"; C.copy.home.quote=profile.quote;
+  }
+  function selectLetter(id=selectedLetterId) {
+    letterRecord=letters.find(row=>row.id===id)||letters[0]||null; selectedLetterId=letterRecord?.id;
+    C.letter=letterRecord ? {greeting:letterRecord.greeting,paragraphs:letterRecord.body.split("\n"),signature:letterRecord.signature} : null;
+  }
+  function searchControl(page,list) {
+    const label=el("label","search-label",shared.search), input=el("input","editor-input search-input");
+    input.type="search"; input.placeholder=shared.searchPlaceholder; label.append(input); page.append(label);
+    const empty=el("p","search-empty",shared.noResults); empty.hidden=true;
+    input.addEventListener("input",()=>{ let visible=0; for(const card of list.children){card.hidden=!((card.dataset.search||card.textContent).toLocaleLowerCase().includes(input.value.trim().toLocaleLowerCase()));if(!card.hidden)visible++;} empty.hidden=visible>0; });
+    page.append(list,empty);
+  }
+  function deleteButton(table,entry) {
+    const control=button(shared.delete,"small-edit danger-button","close");
+    control.addEventListener("click",()=>editor.open({title:shared.deleteConfirm,fields:[],hint:shared.deleteHint,submitLabel:shared.deleteConfirm,save:async()=>{
+      const version=authVersion; await cloud.remove(table,entry); if(version!==authVersion)return;
+      if(table==="memory_timeline") timelineData=timelineData.filter(row=>row.id!==entry.id);
+      if(table==="memory_photos") C.photos=C.photos.filter(row=>row.id!==entry.id);
+      if(table==="memory_letter") {letters=letters.filter(row=>row.id!==entry.id);selectLetter();}
+      await renderRoute(); notice(shared.deleted);
+      if(table==="memory_photos") {try{if(await cloud.cleanupFiles())notice(shared.cleanupPending);}catch{notice(shared.cleanupPending);}}
+    }})); return control;
+  }
+  function editProfile() {
+    const previous=profileRecord;
+    editor.open({title:shared.editProfile,fields:[
+      {name:"first_name",label:shared.firstName,value:previous.first_name,max:40},
+      {name:"second_name",label:shared.secondName,value:previous.second_name,max:40},
+      {name:"start_date",label:shared.anniversary,type:"date",value:previous.start_date},
+      {name:"quote",label:shared.quote,type:"textarea",value:previous.quote,max:2000}
+    ],save:async values=>{const version=authVersion,row=await cloud.save("memory_profile",values,previous);if(version!==authVersion)return;applyProfile(row);await renderRoute();notice(shared.saved);}});
   }
   function editTimeline(entry) {
     editor.open({ title: entry ? shared.editTimeline : shared.addTimeline, fields: [
@@ -115,26 +148,25 @@
       { name: "caption", label: shared.caption, value: photo?.caption, max: 160 },
       { name: "alt", label: shared.alt, value: photo?.alt, max: 300 }
     ];
-    if (!photo) fields.unshift({ name: "file", label: shared.photo, type: "file" });
+    fields.unshift({ name: "file", label: photo ? shared.replacePhoto : shared.photo, type: "file", required: !photo });
     editor.open({ title: photo ? shared.editPhoto : shared.addPhoto, fields, save: async values => {
       const version = authVersion, { file, ...text } = values;
-      const row = photo ? await cloud.save("memory_photos", text, photo) : await cloud.uploadPhoto(file, text);
+      const row = file ? await cloud.uploadPhoto(file, text, photo) : await cloud.save("memory_photos", text, photo);
       if (version !== authVersion) return;
       C.photos = photo ? C.photos.map(item => item.id === row.id ? row : item) : [row, ...C.photos];
-      await renderRoute(); notice(shared.saved);
+      await renderRoute(); notice(shared.saved); cloud.cleanupFiles().then(count=>{if(count&&version===authVersion)notice(shared.cleanupPending);}).catch(()=>{if(photo&&file&&version===authVersion)notice(shared.cleanupPending);});
     } });
   }
-  function editLetter() {
-    const previous = letterRecord;
-    editor.open({ title: shared.editLetter, fields: [
-      { name: "greeting", label: shared.greeting, value: previous.greeting, max: 80 },
-      { name: "body", label: shared.body, type: "textarea", rows: 7, value: previous.body, max: 10000 },
-      { name: "signature", label: shared.signature, value: previous.signature, max: 80 }
+  function editLetter(previous) {
+    editor.open({ title: previous ? shared.editLetter : shared.addLetter, fields: [
+      { name: "title", label: shared.letterTitle, value: previous?.title, max:80 },
+      { name: "greeting", label: shared.greeting, value: previous?.greeting || C.couple.second, max: 80 },
+      { name: "body", label: shared.body, type: "textarea", rows: 7, value: previous?.body, max: 10000 },
+      { name: "signature", label: shared.signature, value: previous?.signature || member.name, max: 80 }
     ], save: async values => {
       const version = authVersion, row = await cloud.save("memory_letter", values, previous);
       if (version !== authVersion) return;
-      letterRecord = row; C.letter = { greeting: row.greeting, paragraphs: row.body.split("\n"), signature: row.signature };
-      C.copy.home.quote = C.letter.paragraphs.slice(0, 2).join("\n");
+      letters=[row,...letters.filter(item=>item.id!==row.id)]; selectLetter(row.id);
       await renderRoute(); notice(shared.saved);
     } });
   }
@@ -205,7 +237,7 @@
   }
   function resetApp() {
     authVersion++; pageToken++; pageAnimation?.cancel(); unlocked = false; member = null;
-    editor.reset(); cloud.clear(); imageObserver.disconnect(); timelineData = []; C.photos = []; C.letter = null; C.copy.home.quote = ""; letterRecord = null;
+    editor.reset(); cloud.clear(); imageObserver.disconnect(); timelineData = []; C.photos = []; C.letter = null; C.copy.home.quote = ""; letterRecord = null; letters=[]; profileRecord=null; selectedLetterId=null;
     clearTimeout(noticeTimer); $("#notice").hidden = true;
     if (dialog.open) { dialogToken++; dialog.close(); dialogClosing = false; }
     app.hidden = true; gate.hidden = false; $("#lock-button").hidden = true; $("#refresh-button").hidden = true; main.replaceChildren();
@@ -247,7 +279,7 @@
         animation.finished.then(() => particle.remove()).catch(() => particle.remove());
       }
     });
-    page.append(copy, scene); return page;
+    details.append(toolbar(shared.editProfile,"edit",editProfile)); page.append(copy, scene); return page;
   }
   async function buildTimeline() {
     const page = el("section"); page.append(heading(C.copy.timeline));
@@ -257,15 +289,16 @@
       const list = el("div", "timeline");
       timelineData.forEach((entry, i) => {
         const card = el("article", "timeline-card"); card.style.setProperty("--i", i);
+        card.dataset.search=entry.date+" "+entry.title+" "+entry.description;
         const meta = el("div", "card-meta"), date = el("time", "timeline-date", dateLabel(entry.date));
         if (entry.date) date.dateTime = entry.date;
         meta.append(date);
         if (entry.date === C.startDate.slice(0, 10)) meta.append(el("span", "small-tag", C.copy.timeline.startTag));
         const edit = button(shared.editTimeline, "small-edit", "edit"); edit.addEventListener("click", () => editTimeline(entry));
-        card.append(meta, el("h2", "", entry.title), el("p", "", entry.description), edit); list.append(card);
+        card.append(meta, el("h2", "", entry.title), el("p", "", entry.description), edit,deleteButton("memory_timeline",entry)); list.append(card);
       });
       const end = el("p", "timeline-end"); end.append(icon("heart"), document.createTextNode(C.copy.timeline.endNote));
-      page.append(list, end);
+      searchControl(page,list); page.append(end);
     } catch { page.append(emptyState(C.copy.timeline.error, "timeline", () => refreshContent())); }
     return page;
   }
@@ -289,22 +322,32 @@
     if (!C.photos.length) { page.append(emptyState(C.copy.album.empty, "album")); return page; }
     const grid = el("div", "album-grid");
     C.photos.forEach((photo, i) => {
-      const item = el("article", "photo-item"), card = button("", "photo-card"); card.style.setProperty("--tilt", `${[-2, 2, -1, 1.5, -2, 2][i % 6]}deg`); card.style.setProperty("--i", i);
+      const item = el("article", "photo-item"), card = button("", "photo-card"); item.dataset.search=photo.caption+" "+photo.alt; card.style.setProperty("--tilt", `${[-2, 2, -1, 1.5, -2, 2][i % 6]}deg`); card.style.setProperty("--i", i);
       card.setAttribute("aria-label", format(C.copy.album.view, { caption: photo.caption }));
       const image = el("img", "photo-image"); image.loading = "lazy"; image.width = 640; image.height = 480;
       const tag = el("span", "photo-tag", photo.placeholder ? C.copy.album.placeholder : "");
       setupPhoto(image, photo, () => { tag.textContent = C.copy.album.missing; });
       card.append(image, el("span", "photo-caption", photo.caption), tag);
       const edit = button(shared.editPhoto, "small-edit", "edit"); edit.addEventListener("click", () => editPhoto(photo));
-      card.addEventListener("click", () => openPhoto(i, card)); item.append(card, edit); grid.append(item);
+      card.addEventListener("click", () => openPhoto(i, card)); item.append(card, edit,deleteButton("memory_photos",photo)); grid.append(item);
     });
-    page.append(grid); return page;
+    searchControl(page,grid); return page;
   }
   function buildLetter() {
-    const page = el("section"); page.append(heading(C.copy.letter), toolbar(shared.editLetter, "edit", editLetter));
+    const page = el("section"); page.append(heading(C.copy.letter), toolbar(shared.addLetter,"plus",()=>editLetter()));
+    if(!letters.length){page.append(emptyState(shared.emptyLetter,"letter"));return page;}
+    const list=el("div","letter-list");
+    for(const row of letters){
+      const item=el("article","letter-summary"); item.dataset.search=row.title+" "+row.greeting+" "+row.body+" "+row.signature;
+      const read=button(row.title,"letter-read","letter"); read.setAttribute("aria-pressed",String(row.id===selectedLetterId));
+      read.addEventListener("click",()=>{selectLetter(row.id);renderRoute();});
+      const edit=button(shared.editLetter,"small-edit","edit"); edit.addEventListener("click",()=>editLetter(row));
+      item.append(read,edit,deleteButton("memory_letter",row));list.append(item);
+    }
+    searchControl(page,list);
     const stage = el("div", "letter-stage"), envelope = button("", "envelope-button");
-    envelope.setAttribute("aria-label", C.copy.letter.envelopeLabel); envelope.setAttribute("aria-expanded", "false"); envelope.setAttribute("aria-controls", "letter-drawer");
-    const insert = el("span", "envelope-insert"); insert.append(el("span", "envelope-to", C.copy.letter.recipient));
+    envelope.setAttribute("aria-label", shared.readLetter); envelope.setAttribute("aria-expanded", "false"); envelope.setAttribute("aria-controls", "letter-drawer");
+    const insert = el("span", "envelope-insert"); insert.append(el("span", "envelope-to", C.letter.greeting));
     const seal = el("span", "envelope-seal"); seal.append(icon("heart"));
     envelope.append(el("span", "envelope-back"), insert, el("span", "envelope-front"), el("span", "envelope-flap"), seal, el("span", "envelope-stamp", C.copy.letter.stamp));
     const prompt = el("p", "envelope-prompt", C.copy.letter.open), drawer = el("div", "letter-drawer");

@@ -1,7 +1,7 @@
 // 此文件会公开下载 只放界面配置和可公开的连接参数
 // 私密内容在 Supabase 数据库中 管理密钥与账号密码不得放在这里
 window.SITE_CONFIG = {
-  title: "小宇和乐乐的猫咪纪念小窝",
+  title: "宇乐小窝",
   description: "一点点日常 一大份喜欢 小宇和乐乐的恋爱小窝",
   couple: { first: "小宇", second: "乐乐" },
   startDate: "2026-06-12T00:00:00+08:00",
@@ -9,7 +9,7 @@ window.SITE_CONFIG = {
   cloud: { url: "https://fzptxrlvsukcktadkzgp.supabase.co", publishableKey: "sb_publishable_bEbhdflz_pSlwpodKtqLAA_a6Q38JFo", bucket: "couple-photos", maxPhotoBytes: 10485760 },
   assets: { cat: "assets/cat.svg", fallbackPhoto: "assets/photos/placeholder.svg" },
   copy: {
-    brand: "我们的恋爱小窝",
+    brand: "宇乐小窝",
     brandEnglish: "a little place for us",
     footer: "一点点日常 一大份喜欢",
     lock: "退出",
@@ -62,8 +62,12 @@ window.SITE_CONFIG = {
       save: "存进我们的小窝",
       saving: "正在保存",
       cancel: "先不改了",
-      emptyLetter: "这里还没有写信 点修改 留下想对彼此说的话",
-      editHint: "你们都能修改 保存后另一半刷新就能看到"
+      editHint: "你们都能修改 保存后另一半刷新就能看到",
+      addLetter: "写一封新情书", letterTitle: "给这封信起个名字", readLetter: "拆开这封信",
+      editProfile: "修改小窝资料", firstName: "小宇的昵称", secondName: "乐乐的昵称", anniversary: "相恋纪念日", quote: "首页的小纸条",
+      delete: "删除", deleteConfirm: "确认删除", deleteHint: "这条内容会从两个人的小窝中删除 无法撤销 请确认后再操作", deleted: "已经从我们的小窝移除",
+      search: "查找内容", searchPlaceholder: "输入关键词或日期查找", noResults: "还没有找到匹配的内容", cleanupPending: "内容已更新 有照片文件等待清理 点刷新后会再次尝试",
+      replacePhoto: "换一张照片 可不选", replaceHint: "不选照片时 只修改文字说明", emptyLetter: "信箱还空着 写下第一封信吧"
     },
     home: {
       eyebrow: "OUR LITTLE WORLD",
