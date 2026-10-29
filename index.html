@@ -5,11 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#fff9f2">
   <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; font-src 'self'; connect-src 'self' https://fzptxrlvsukcktadkzgp.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
   <meta name="description" content="">
   <title>纪念小窝</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="shared.css">
   <script defer src="config.js"></script>
+  <script defer src="assets/vendor/supabase-2.118.0.js"></script>
+  <script defer src="cloud.js"></script>
+  <script defer src="editor.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -22,5 +28,7 @@
     <nav id="bottom-nav" class="bottom-nav"></nav>
   </div>
   <dialog id="photo-dialog" class="photo-dialog"></dialog>
+  <dialog id="editor-dialog" class="editor-dialog" aria-labelledby="editor-heading"></dialog>
+  <p id="notice" class="notice" role="status" hidden></p>
 </body>
 </html>

@@ -1,17 +1,18 @@
-// 修改这里即可更换小窝内容。口令是前端遮挡，不用于保护私密资料。
+// 此文件会公开下载 只放界面配置和可公开的连接参数
+// 私密内容在 Supabase 数据库中 管理密钥与账号密码不得放在这里
 window.SITE_CONFIG = {
   title: "小宇和乐乐的猫咪纪念小窝",
   description: "一点点日常 一大份喜欢 小宇和乐乐的恋爱小窝",
   couple: { first: "小宇", second: "乐乐" },
   startDate: "2026-06-12T00:00:00+08:00",
   timeZone: "Asia/Shanghai",
-  access: { password: "0612", sessionKey: "xiaoyu-lele-memory-unlocked" },
+  cloud: { url: "https://fzptxrlvsukcktadkzgp.supabase.co", publishableKey: "sb_publishable_bEbhdflz_pSlwpodKtqLAA_a6Q38JFo", bucket: "couple-photos", maxPhotoBytes: 10485760 },
   assets: { cat: "assets/cat.svg", fallbackPhoto: "assets/photos/placeholder.svg" },
   copy: {
     brand: "我们的恋爱小窝",
     brandEnglish: "a little place for us",
     footer: "一点点日常 一大份喜欢",
-    lock: "锁上小窝",
+    lock: "退出",
     loading: "正在打开我们的小窝",
     retry: "再试一次",
     unknownDate: "日期待填写",
@@ -20,13 +21,49 @@ window.SITE_CONFIG = {
     gate: {
       eyebrow: "ONLY YOU & ME",
       title: "欢迎回到\n我们的小窝",
-      description: "这里藏着 一点点关于我们的喜欢",
-      label: "我们的小暗号",
-      placeholder: "输入小暗号",
+      description: "用自己的账号 回到我们的小小世界",
+      email: "登录邮箱",
+      emailPlaceholder: "输入你的邮箱",
+      label: "登录密码",
+      placeholder: "输入你的密码",
       submit: "轻轻推开门",
-      hint: "提示 我们的纪念日 四位数字",
-      error: "暗号好像不对哦 再想一想",
+      hint: "只为小宇和乐乐开放",
       signature: "小宇 & 乐乐的小小世界"
+    },
+    shared: {
+      refresh: "刷新内容",
+      signedIn: "{name} 正在小窝里",
+      saved: "已经保存到我们的小窝",
+      refreshed: "已经是最新内容啦",
+      refreshing: "正在取回我们的新内容",
+      notConfigured: "小窝的云端连接还在准备中 请稍后回来",
+      loginRequired: "请重新登录我们的小窝",
+      notMember: "这个账号还没有小窝的访问权限",
+      loginError: "邮箱或密码不对 请再检查一下",
+      networkError: "暂时连接不到小窝 内容还没有保存 请稍后重试",
+      loadError: "内容暂时没有取回来 请点刷新再试一次",
+      conflict: "这条内容刚被另一半更新了 请先复制你的文字 取消并刷新后再修改",
+      photoTypeError: "请选择 10 MB 以内的 JPG PNG 或 WebP 照片 HEIC 请先转为 JPG",
+      photoHint: "JPG PNG 或 WebP 每张不超过 10 MB",
+      addTimeline: "记下一件小事",
+      editTimeline: "修改这件小事",
+      addPhoto: "放进一张照片",
+      editPhoto: "修改照片说明",
+      editLetter: "修改这封信",
+      date: "日期",
+      title: "这件小事的名字",
+      description: "想记住的细节",
+      photo: "选择照片",
+      caption: "照片下面的小字",
+      alt: "照片里有什么",
+      greeting: "写给谁",
+      body: "想对你说的话",
+      signature: "落款",
+      save: "存进我们的小窝",
+      saving: "正在保存",
+      cancel: "先不改了",
+      emptyLetter: "这里还没有写信 点修改 留下想对彼此说的话",
+      editHint: "你们都能修改 保存后另一半刷新就能看到"
     },
     home: {
       eyebrow: "OUR LITTLE WORLD",
@@ -41,7 +78,7 @@ window.SITE_CONFIG = {
       catHint: "戳戳小猫 收下一点小心意",
       catLabel: "点击这只戴蝴蝶结的小猫 会冒出爱心",
       catReply: "喜欢你呀",
-      quote: "幸福无教程\n你在我身边便是幸福",
+      quote: "",
       quoteLabel: "写给乐乐的小纸条",
       albumLink: "去看看我们的相册",
       loveStamp: "MADE OF LOVE"
@@ -81,17 +118,6 @@ window.SITE_CONFIG = {
       dateLabel: "写在我们的小窝里"
     }
   },
-  letter: {
-    greeting: "乐乐",
-    paragraphs: ["幸福无教程", "你在我身边便是幸福", "我爱你乐乐⌯'ㅅ'⌯"],
-    signature: "小宇"
-  },
-  photos: [
-    { src: "assets/photos/memory-01.svg", caption: "留一个位置 给我们的合照", alt: "两个相邻的可爱猫咪头像 原创占位插画", placeholder: true },
-    { src: "assets/photos/memory-02.svg", caption: "留一个位置 给一起看过的风景", alt: "云朵和夕阳的原创占位插画", placeholder: true },
-    { src: "assets/photos/memory-03.svg", caption: "留一个位置 给平凡的小日常", alt: "两杯饮品的原创占位插画", placeholder: true },
-    { src: "assets/photos/memory-04.svg", caption: "留一个位置 给特别的一天", alt: "小蛋糕的原创占位插画", placeholder: true },
-    { src: "assets/photos/memory-05.svg", caption: "留一个位置 给我们的散步", alt: "小花和信封的原创占位插画", placeholder: true },
-    { src: "assets/photos/memory-06.svg", caption: "留一个位置 给以后的故事", alt: "月亮和星星的原创占位插画", placeholder: true }
-  ]
+  letter: null,
+  photos: []
 };
